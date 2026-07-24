@@ -232,6 +232,16 @@
       background: #fff8dc;
     }
 
+    #mesaj.hazir {
+      color: #3f9d68;
+      background: #eaf7ee;
+    }
+
+    body.koyu-tema #mesaj.hazir {
+      background: #23392b;
+      color: #8fe0ac;
+    }
+
   </style>
 </head>
 <body>
@@ -468,6 +478,7 @@
     let seviye = 1;
     let hiz = zorlukHizlari[secilenZorluk]; // ms cinsinden, küçüldükçe yılan hızlanır
     let oyunAktif = true;
+    let oyunBasladi = false;
     let duraklatildi = false;
     let zamanlayici = null;
 
@@ -622,11 +633,13 @@
       seviye = 1;
       hiz = zorlukHizlari[secilenZorluk];
       oyunAktif = true;
+      oyunBasladi = false;
       duraklatildi = false;
+      clearInterval(zamanlayici);
 
       const mesaj = document.getElementById('mesaj');
-      mesaj.textContent = '';
-      mesaj.className = '';
+      mesaj.textContent = 'Başlamak için bir yön tuşuna bas veya kaydır';
+      mesaj.className = 'hazir';
 
       const duraklatBtn = document.getElementById('duraklatBtn');
       duraklatBtn.disabled = false;
@@ -635,11 +648,10 @@
       document.getElementById('tekrarBtn').disabled = true;
 
       skorGoster();
-      oyunuBaslat();
     }
 
     function duraklatVeyaDevamEt() {
-      if (!oyunAktif) return; // oyun bittiyse duraklatmanın anlamı yok
+      if (!oyunAktif || !oyunBasladi) return; // oyun bittiyse ya da henüz başlamadıysa duraklatmanın anlamı yok
 
       duraklatildi = !duraklatildi;
       const mesaj = document.getElementById('mesaj');
@@ -659,6 +671,14 @@
     }
 
     function yonDegistir(yeniYon) {
+      if (!oyunBasladi) {
+        oyunBasladi = true;
+        const mesaj = document.getElementById('mesaj');
+        mesaj.textContent = '';
+        mesaj.className = '';
+        oyunuBaslat();
+      }
+
       if (yeniYon === zitYon[yon]) return; // yılan aniden ters yöne dönüp kendine çarpmasın
       yon = yeniYon;
     }
@@ -807,13 +827,15 @@
       requestAnimationFrame(cizDongu);
     }
 
-    // Üç resim de yüklenince oyunu ve çizim döngüsünü başlat
+    // Üç resim de yüklenince çizim döngüsünü başlat; yılan ilk tuşa/kaydırmaya kadar hareket etmez
     let yuklenenSayisi = 0;
     function resimYuklendi() {
       yuklenenSayisi++;
       if (yuklenenSayisi === 3) {
         skorGoster();
-        oyunuBaslat();
+        const mesaj = document.getElementById('mesaj');
+        mesaj.textContent = 'Başlamak için bir yön tuşuna bas veya kaydır';
+        mesaj.className = 'hazir';
         cizDongu();
       }
     }
