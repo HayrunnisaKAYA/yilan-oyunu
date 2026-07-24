@@ -1166,8 +1166,9 @@
         const kalanGenislik = window.innerWidth * 0.96 - panel.offsetWidth - altPanel.offsetWidth - 28;
         boyut = Math.max(160, Math.min(880, kalanGenislik, kalanYukseklik));
       } else {
+        const altPanel = document.querySelector('.alt-panel');
         const ustBosluk = canvas.offsetTop;
-        const altBosluk = mesaj.offsetHeight + 24; // mesaj alanı + kart alt boşluğu
+        const altBosluk = mesaj.offsetHeight + altPanel.offsetHeight + 36; // mesaj + alt panel + boşluklar (güvenlik payıyla)
         const kalanYukseklik = window.innerHeight * 0.95 - ustBosluk - altBosluk;
         boyut = Math.max(220, Math.min(880, window.innerWidth * 0.96, kalanYukseklik));
       }
