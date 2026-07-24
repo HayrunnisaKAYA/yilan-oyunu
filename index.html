@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Yılan Oyunu</title>
+  <style>
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    @keyframes arkaPlanAkisi {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    body {
+      position: relative;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(120deg, #eef7f0, #dff3e6, #e4f6ec, #d7f0e2);
+      background-size: 300% 300%;
+      animation: arkaPlanAkisi 12s ease-in-out infinite;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Arka planın tamamına, yılan pulunu andıran ince baklava desenli bir doku serpiştiriyoruz */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Cpath d='M22 2 L42 22 L22 42 L2 22 Z' fill='none' stroke='%233f9d68' stroke-width='1.5' opacity='0.18'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .kart {
+      position: relative;
+      z-index: 1;
+      box-sizing: border-box;
+      max-height: 95vh;
+      overflow-y: auto;
+      padding: 14px 24px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #3f9d68;
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+      text-shadow: 0 2px 0 rgba(163, 217, 177, 0.5);
+      letter-spacing: 0.5px;
+    }
+
+    .durum-cubugu {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .rozet {
+      background: #eaf7ee;
+      color: #3f9d68;
+      font-weight: bold;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+    }
+
+    .duraklat-btn, .tekrar-btn {
+      background: #a3d9b1;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 0.95rem;
+      padding: 8px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .duraklat-btn:hover, .tekrar-btn:hover {
+      background: #7ec895;
+      transform: translateY(-2px);
+    }
+
+    .duraklat-btn:disabled, .tekrar-btn:disabled {
+      background: #cfd8d3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .tekrar-btn {
+      background: #4caf82;
+    }
+
+    .secim-cubugu {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .secim-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      cursor: pointer;
+      background: #eaf7ee;
+      color: #3f9d68;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .secim-btn.secili {
+      background: #3f9d68;
+      color: white;
+    }
+
+    .ilerleme-disi {
+      width: min(320px, 80%);
+      height: 8px;
+      background: #eaf7ee;
+      border-radius: 999px;
+      margin: 0 auto 8px;
+      overflow: hidden;
+    }
+
+    .ilerleme-ici {
+      height: 100%;
+      width: 0%;
+      background: #3f9d68;
+      border-radius: 999px;
+      transition: width 0.2s ease;
+    }
+
+    @keyframes sarsinti {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+
+    canvas.sars {
+      animation: sarsinti 0.4s ease;
+    }
+
+    body.koyu-tema {
+      background: linear-gradient(120deg, #16241b, #1c2e22, #142a1e, #1a2a20);
+    }
+
+    body.koyu-tema h1 {
+      color: #8fe0ac;
+    }
+
+    body.koyu-tema .rozet {
+      background: #23392b;
+      color: #8fe0ac;
+    }
+
+    body.koyu-tema .secim-btn {
+      background: #23392b;
+      color: #8fe0ac;
+    }
+
+    body.koyu-tema .secim-btn.secili {
+      background: #4caf82;
+      color: #0e1a12;
+    }
+
+    body.koyu-tema .ilerleme-disi {
+      background: #23392b;
+    }
+
+    body.koyu-tema canvas {
+      background: #1b2a20;
+      border-color: #3f9d68;
+    }
+
+    body.koyu-tema #mesaj.bitti {
+      background: #3a1f1f;
+      color: #ff8a80;
+    }
+
+    body.koyu-tema #mesaj.duraklatildi {
+      background: #3a341a;
+      color: #ffe27a;
+    }
+
+    canvas {
+      background: #f7f0e2;
+      border: 4px solid #a3d9b1;
+      border-radius: 12px;
+      display: block;
+      margin: 0 auto;
+      width: min(880px, 96vw, 58vh);
+      height: min(880px, 96vw, 58vh);
+      box-shadow: 0 0 24px rgba(163, 217, 177, 0.7), 0 0 0 rgba(0,0,0,0);
+      touch-action: none;
+    }
+
+    #mesaj {
+      box-sizing: border-box;
+      min-height: 1.4em;
+      margin: 14px auto 0;
+      padding: 10px;
+      font-weight: bold;
+      border-radius: 10px;
+      background: transparent;
+      max-width: min(880px, 96vw, 58vh);
+      word-wrap: break-word;
+    }
+
+    #mesaj.bitti {
+      color: #c0392b;
+      background: #fdecea;
+    }
+
+    #mesaj.duraklatildi {
+      color: #7a6a00;
+      background: #fff8dc;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="kart">
+    <h1>🐍 Yılan Oyunu</h1>
+
+    <div class="durum-cubugu">
+      <span id="skor" class="rozet">Skor: 0 (Seviye: 1)</span>
+      <span id="enYuksek" class="rozet">En Yüksek: 0</span>
+      <button id="duraklatBtn" class="duraklat-btn">⏸ Duraklat</button>
+      <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
+      <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
+    </div>
+
+    <div class="ilerleme-disi"><div id="ilerlemeIci" class="ilerleme-ici"></div></div>
+
+    <div class="secim-cubugu">
+      <button class="secim-btn zorluk-btn" data-zorluk="kolay">🐢 Kolay</button>
+      <button class="secim-btn zorluk-btn secili" data-zorluk="orta">🐍 Orta</button>
+      <button class="secim-btn zorluk-btn" data-zorluk="zor">🔥 Zor</button>
+    </div>
+
+    <canvas id="oyunAlani" width="600" height="600"></canvas>
+    <p id="mesaj"></p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('oyunAlani');
+    const ctx = canvas.getContext('2d');
+    const kutuBoyu = 20; // her bir kare 20x20 piksel
+
+    function baslangicYilani() {
+      return [
+        { x: 8, y: 10 },
+        { x: 7, y: 10 },
+        { x: 6, y: 10 }
+      ];
+    }
+
+    let yilan = baslangicYilani();
+    let yon = 'sag'; // şu anki hareket yönü: sag, sol, yukari, asagi
+
+    const yem = { x: 15, y: 10 };
+    let altinYem = null; // aktif değilken null
+    let altinYemZamanlayici = null;
+    let engeller = [];
+
+    // --- Kafa, gövde ve kuyruk için SVG çizimleri (sağa bakacak şekilde tasarlandı, yöne göre döndürülecek) ---
+    const kafaSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7ed7a0"/>
+            <stop offset="1" stop-color="#3f9d68"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="18" cy="20" rx="17" ry="15" fill="url(#g)"/>
+        <path d="M33 19 L40 16 L37 20 L40 24 L33 21 Z" fill="#e05252"/>
+        <circle cx="23" cy="14" r="4" fill="white"/>
+        <circle cx="24.5" cy="13" r="2" fill="black"/>
+        <circle cx="23" cy="26" r="4" fill="white"/>
+        <circle cx="24.5" cy="27" r="2" fill="black"/>
+      </svg>`;
+
+    const govdeSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#8fe0ac"/>
+            <stop offset="1" stop-color="#4caf82"/>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="28" height="28" rx="10" fill="url(#g)"/>
+        <polygon points="15,7 21,15 15,23 9,15" fill="#ffe27a" opacity="0.55"/>
+      </svg>`;
+
+    const kuyrukSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#8fe0ac"/>
+            <stop offset="1" stop-color="#4caf82"/>
+          </linearGradient>
+        </defs>
+        <path d="M3 5 L3 25 Q17 25 27 15 Q17 5 3 5 Z" fill="url(#g)"/>
+      </svg>`;
+
+    function resimYukle(svgMetni, yuklendiCallback) {
+      const img = new Image();
+      if (yuklendiCallback) img.onload = yuklendiCallback;
+      img.src = 'data:image/svg+xml,' + encodeURIComponent(svgMetni);
+      return img;
+    }
+
+    const kafaResmi = resimYukle(kafaSvg);
+    const govdeResmi = resimYukle(govdeSvg);
+    const kuyrukResmi = resimYukle(kuyrukSvg);
+
+    // Yöne göre (isimle) kaç radyan döndürülecek — kafa için kullanılıyor
+    function yonAcisi(y) {
+      if (y === 'sag') return 0;
+      if (y === 'sol') return Math.PI;
+      if (y === 'yukari') return -Math.PI / 2;
+      if (y === 'asagi') return Math.PI / 2;
+      return 0;
+    }
+
+    // İki nokta arasındaki (dx, dy) farkına göre açı — kuyruk için kullanılıyor
+    function deltaAcisi(dx, dy) {
+      if (dx === 1) return 0;
+      if (dx === -1) return Math.PI;
+      if (dy === 1) return Math.PI / 2;
+      if (dy === -1) return -Math.PI / 2;
+      return 0;
+    }
+
+    function resimCiz(resim, merkezX, merkezY, boyut, aci) {
+      ctx.save();
+      ctx.translate(merkezX, merkezY);
+      ctx.rotate(aci);
+      ctx.drawImage(resim, -boyut / 2, -boyut / 2, boyut, boyut);
+      ctx.restore();
+    }
+
+    // --- Elma/altın yem yenince çıkan küçük parçacık patlaması ---
+    let parcaciklar = [];
+
+    function parcaciklarOlustur(pikselX, pikselY, renk) {
+      for (let i = 0; i < 10; i++) {
+        const aci = Math.random() * Math.PI * 2;
+        const hiz = 1 + Math.random() * 2.5;
+        parcaciklar.push({
+          x: pikselX,
+          y: pikselY,
+          vx: Math.cos(aci) * hiz,
+          vy: Math.sin(aci) * hiz,
+          omur: 22,
+          baslangicOmur: 22,
+          renk
+        });
+      }
+    }
+
+    function parcaciklariGuncelleVeCiz() {
+      parcaciklar.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.omur -= 1;
+      });
+      parcaciklar = parcaciklar.filter(p => p.omur > 0);
+
+      parcaciklar.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.omur / p.baslangicOmur);
+        ctx.fillStyle = p.renk;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function ciz() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Engelleri (taş bloklar) çiz
+      engeller.forEach(engel => {
+        const ux = engel.x * kutuBoyu;
+        const uy = engel.y * kutuBoyu;
+        const grd = ctx.createLinearGradient(ux, uy, ux, uy + kutuBoyu);
+        grd.addColorStop(0, '#b8b8b8');
+        grd.addColorStop(1, '#8c8c8c');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.roundRect(ux + 1, uy + 1, kutuBoyu - 2, kutuBoyu - 2, 5);
+        ctx.fill();
+      });
+
+      // Yem, hafif parlayan bir gölgeyle dikkat çeksin
+      ctx.save();
+      ctx.shadowColor = 'rgba(224, 82, 82, 0.6)';
+      ctx.shadowBlur = 12;
+      ctx.font = kutuBoyu + 'px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🍎', yem.x * kutuBoyu + kutuBoyu / 2, yem.y * kutuBoyu + kutuBoyu / 2 + 1);
+      ctx.restore();
+
+      // Altın yem (varsa), sarı bir parlamayla
+      if (altinYem) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(255, 204, 51, 0.85)';
+        ctx.shadowBlur = 16;
+        ctx.font = kutuBoyu + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⭐', altinYem.x * kutuBoyu + kutuBoyu / 2, altinYem.y * kutuBoyu + kutuBoyu / 2 + 1);
+        ctx.restore();
+      }
+
+      // Yılanın altına yumuşak bir gölge düşür, sanki yüzeyin üstünde duruyormuş gibi görünsün
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 3;
+
+      yilan.forEach((parca, index) => {
+        const merkezX = parca.x * kutuBoyu + kutuBoyu / 2;
+        const merkezY = parca.y * kutuBoyu + kutuBoyu / 2;
+
+        if (index === 0) {
+          resimCiz(kafaResmi, merkezX, merkezY, kutuBoyu + 4, yonAcisi(yon));
+        } else if (index === yilan.length - 1) {
+          const onceki = yilan[index - 1];
+          resimCiz(kuyrukResmi, merkezX, merkezY, kutuBoyu, deltaAcisi(parca.x - onceki.x, parca.y - onceki.y));
+        } else {
+          resimCiz(govdeResmi, merkezX, merkezY, kutuBoyu, 0);
+        }
+      });
+      ctx.restore();
+
+      parcaciklariGuncelleVeCiz();
+    }
+
+    const kareSayisi = canvas.width / kutuBoyu;
+
+    const zitYon = { sag: 'sol', sol: 'sag', yukari: 'asagi', asagi: 'yukari' };
+
+    const zorlukHizlari = { kolay: 200, orta: 150, zor: 100 };
+    let secilenZorluk = 'orta';
+
+    let skor = 0;
+    let seviye = 1;
+    let hiz = zorlukHizlari[secilenZorluk]; // ms cinsinden, küçüldükçe yılan hızlanır
+    let oyunAktif = true;
+    let duraklatildi = false;
+    let zamanlayici = null;
+
+    // Tarayıcı hafızasında saklanan en yüksek skoru ve son oyunların skorlarını oku
+    let enYuksekSkor = parseInt(localStorage.getItem('yilanEnYuksekSkor')) || 0;
+
+    // --- Ses efektleri: dosya kullanmadan, doğrudan tarayıcıda kısa bir ton üretiyoruz ---
+    let sesBaglami = null;
+
+    // Ses bağlamı tarayıcı tarafından "suspended" durumuna alınmış olabilir;
+    // resume() ASENKRON çalıştığı için, sesi ancak resume tamamlandıktan sonra çalmalıyız,
+    // yoksa ses hiç duyulmadan sessizce kaybolabiliyor.
+    function tonCal(baslangicFrekans, bitisFrekans, sure, kazancBaslangic) {
+      if (!sesBaglami) sesBaglami = new (window.AudioContext || window.webkitAudioContext)();
+
+      const calistir = () => {
+        const osc = sesBaglami.createOscillator();
+        const kazanc = sesBaglami.createGain();
+        const simdi = sesBaglami.currentTime;
+
+        osc.frequency.setValueAtTime(baslangicFrekans, simdi);
+        if (bitisFrekans !== baslangicFrekans) {
+          osc.frequency.exponentialRampToValueAtTime(bitisFrekans, simdi + sure);
+        }
+
+        osc.connect(kazanc);
+        kazanc.connect(sesBaglami.destination);
+        kazanc.gain.setValueAtTime(kazancBaslangic, simdi);
+        kazanc.gain.exponentialRampToValueAtTime(0.0001, simdi + sure);
+
+        osc.start();
+        osc.stop(simdi + sure);
+      };
+
+      if (sesBaglami.state === 'suspended') {
+        sesBaglami.resume().then(calistir);
+      } else {
+        calistir();
+      }
+    }
+
+    function yemSesiCal() {
+      tonCal(700, 700, 0.12, 0.2);
+    }
+
+    function altinYemSesiCal() {
+      tonCal(1000, 1300, 0.18, 0.25);
+    }
+
+    // Oyun bitince çalan, yüksekten alçağa kayan belirgin "womp" sesi
+    function bitisSesiCal() {
+      tonCal(320, 70, 0.45, 0.3);
+    }
+
+    function skorGoster() {
+      document.getElementById('skor').textContent = 'Skor: ' + skor + '  (Seviye: ' + seviye + ')';
+      document.getElementById('enYuksek').textContent = 'En Yüksek: ' + enYuksekSkor;
+
+      const ilerlemeYuzdesi = ((skor % 10) / 10) * 100;
+      document.getElementById('ilerlemeIci').style.width = ilerlemeYuzdesi + '%';
+    }
+
+    function enYuksekSkoruGuncelle() {
+      if (skor > enYuksekSkor) {
+        enYuksekSkor = skor;
+        localStorage.setItem('yilanEnYuksekSkor', enYuksekSkor);
+      }
+    }
+
+    // Yılanın, yemin, altın yemin ve engellerin üzerinde olmayan boş bir kare bulur
+    function pozisyonBosMu(pozisyon) {
+      const yilandaMi = yilan.some(p => p.x === pozisyon.x && p.y === pozisyon.y);
+      const yemdeMi = pozisyon.x === yem.x && pozisyon.y === yem.y;
+      const altinYemdeMi = altinYem && pozisyon.x === altinYem.x && pozisyon.y === altinYem.y;
+      const engeldeMi = engeller.some(e => e.x === pozisyon.x && e.y === pozisyon.y);
+      return !yilandaMi && !yemdeMi && !altinYemdeMi && !engeldeMi;
+    }
+
+    function rastgeleBosPozisyon() {
+      let pozisyon;
+      let deneme = 0;
+      do {
+        pozisyon = {
+          x: Math.floor(Math.random() * kareSayisi),
+          y: Math.floor(Math.random() * kareSayisi)
+        };
+        deneme++;
+      } while (!pozisyonBosMu(pozisyon) && deneme < 300);
+      return pozisyon;
+    }
+
+    function yeniYemYerlestir() {
+      const pozisyon = rastgeleBosPozisyon();
+      yem.x = pozisyon.x;
+      yem.y = pozisyon.y;
+    }
+
+    // Elma yenince belirli bir ihtimalle, birkaç saniyeliğine duran bonuslu bir altın yem çıkar
+    function altinYemDenemesiYap() {
+      if (altinYem) return;
+      if (Math.random() < 0.35) {
+        altinYem = rastgeleBosPozisyon();
+        altinYemZamanlayici = setTimeout(() => {
+          altinYem = null;
+        }, 5000);
+      }
+    }
+
+    // Seviye arttıkça haritaya sabit taş engeller ekler
+    function engelEkle(sayi) {
+      for (let i = 0; i < sayi; i++) {
+        engeller.push(rastgeleBosPozisyon());
+      }
+    }
+
+    function oyunuBaslat() {
+      if (zamanlayici) clearInterval(zamanlayici);
+      zamanlayici = setInterval(ilerle, hiz);
+    }
+
+    function oyunuBitir() {
+      oyunAktif = false;
+      clearInterval(zamanlayici);
+      bitisSesiCal();
+
+      canvas.classList.add('sars');
+      setTimeout(() => canvas.classList.remove('sars'), 400);
+
+      enYuksekSkoruGuncelle();
+      skorGoster();
+
+      const mesaj = document.getElementById('mesaj');
+      mesaj.textContent = 'Oyun bitti! Skor: ' + skor + ' — Tekrar Oyna butonuna basabilirsin';
+      mesaj.className = 'bitti';
+
+      document.getElementById('duraklatBtn').disabled = true;
+      document.getElementById('tekrarBtn').disabled = false;
+    }
+
+    function yenidenBaslat() {
+      yilan = baslangicYilani();
+      yon = 'sag';
+      yem.x = 15;
+      yem.y = 10;
+
+      if (altinYemZamanlayici) clearTimeout(altinYemZamanlayici);
+      altinYem = null;
+      engeller = [];
+      parcaciklar = [];
+
+      skor = 0;
+      seviye = 1;
+      hiz = zorlukHizlari[secilenZorluk];
+      oyunAktif = true;
+      duraklatildi = false;
+
+      const mesaj = document.getElementById('mesaj');
+      mesaj.textContent = '';
+      mesaj.className = '';
+
+      const duraklatBtn = document.getElementById('duraklatBtn');
+      duraklatBtn.disabled = false;
+      duraklatBtn.textContent = '⏸ Duraklat';
+
+      document.getElementById('tekrarBtn').disabled = true;
+
+      skorGoster();
+      oyunuBaslat();
+    }
+
+    function duraklatVeyaDevamEt() {
+      if (!oyunAktif) return; // oyun bittiyse duraklatmanın anlamı yok
+
+      duraklatildi = !duraklatildi;
+      const mesaj = document.getElementById('mesaj');
+      const buton = document.getElementById('duraklatBtn');
+
+      if (duraklatildi) {
+        clearInterval(zamanlayici);
+        mesaj.textContent = 'Duraklatıldı — devam etmek için boşluk tuşuna veya butona bas';
+        mesaj.className = 'duraklatildi';
+        buton.textContent = '▶ Devam Et';
+      } else {
+        mesaj.textContent = '';
+        mesaj.className = '';
+        buton.textContent = '⏸ Duraklat';
+        oyunuBaslat();
+      }
+    }
+
+    function yonDegistir(yeniYon) {
+      if (yeniYon === zitYon[yon]) return; // yılan aniden ters yöne dönüp kendine çarpmasın
+      yon = yeniYon;
+    }
+
+    function ilerle() {
+      if (!oyunAktif || duraklatildi) return;
+
+      const kafa = yilan[0];
+      const yeniKafa = { x: kafa.x, y: kafa.y };
+      if (yon === 'sag') yeniKafa.x++;
+      else if (yon === 'sol') yeniKafa.x--;
+      else if (yon === 'yukari') yeniKafa.y--;
+      else if (yon === 'asagi') yeniKafa.y++;
+
+      // Duvara çarptı mı
+      if (yeniKafa.x < 0 || yeniKafa.x >= kareSayisi || yeniKafa.y < 0 || yeniKafa.y >= kareSayisi) {
+        oyunuBitir();
+        return;
+      }
+
+      // Kendine çarptı mı
+      if (yilan.some(parca => parca.x === yeniKafa.x && parca.y === yeniKafa.y)) {
+        oyunuBitir();
+        return;
+      }
+
+      // Bir engele çarptı mı
+      if (engeller.some(engel => engel.x === yeniKafa.x && engel.y === yeniKafa.y)) {
+        oyunuBitir();
+        return;
+      }
+
+      yilan.unshift(yeniKafa);
+
+      const merkezPikselX = yeniKafa.x * kutuBoyu + kutuBoyu / 2;
+      const merkezPikselY = yeniKafa.y * kutuBoyu + kutuBoyu / 2;
+
+      const yemYendi = yeniKafa.x === yem.x && yeniKafa.y === yem.y;
+      const altinYemYendi = altinYem && yeniKafa.x === altinYem.x && yeniKafa.y === altinYem.y;
+
+      if (yemYendi) {
+        skor++;
+        yemSesiCal();
+        parcaciklarOlustur(merkezPikselX, merkezPikselY, '#e05252');
+
+        // Her 10 elmada bir seviye atla, hızlan ve (2. seviyeden itibaren) yeni engeller ekle
+        if (skor % 10 === 0) {
+          seviye++;
+          hiz = Math.max(60, hiz - 15); // çok hızlanınca oynanamaz olmasın diye alt sınır koyduk
+          oyunuBaslat();
+          if (seviye >= 2) engelEkle(2);
+        }
+
+        skorGoster();
+        yeniYemYerlestir();
+        altinYemDenemesiYap();
+      } else if (altinYemYendi) {
+        skor += 3;
+        clearTimeout(altinYemZamanlayici);
+        altinYem = null;
+        altinYemSesiCal();
+        parcaciklarOlustur(merkezPikselX, merkezPikselY, '#ffcc33');
+        skorGoster();
+      } else {
+        yilan.pop();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ') {
+        e.preventDefault(); // sayfanın aşağı kaymasını engelle
+        if (!oyunAktif) {
+          yenidenBaslat();
+        } else {
+          duraklatVeyaDevamEt();
+        }
+        return;
+      }
+
+      const tusYon = {
+        ArrowRight: 'sag',
+        ArrowLeft: 'sol',
+        ArrowUp: 'yukari',
+        ArrowDown: 'asagi'
+      }[e.key];
+
+      if (!tusYon) return;
+      yonDegistir(tusYon);
+    });
+
+    document.getElementById('duraklatBtn').addEventListener('click', duraklatVeyaDevamEt);
+    document.getElementById('tekrarBtn').addEventListener('click', yenidenBaslat);
+
+    // --- Koyu tema ---
+    let koyuTemaAktif = localStorage.getItem('yilanKoyuTema') === '1';
+    const temaBtn = document.getElementById('temaBtn');
+
+    function koyuTemaGoster() {
+      document.body.classList.toggle('koyu-tema', koyuTemaAktif);
+      temaBtn.textContent = koyuTemaAktif ? '☀️ Açık Tema' : '🌙 Koyu Tema';
+    }
+
+    temaBtn.addEventListener('click', () => {
+      koyuTemaAktif = !koyuTemaAktif;
+      localStorage.setItem('yilanKoyuTema', koyuTemaAktif ? '1' : '0');
+      koyuTemaGoster();
+    });
+
+    koyuTemaGoster();
+
+    document.querySelectorAll('.zorluk-btn').forEach((buton) => {
+      buton.addEventListener('click', () => {
+        secilenZorluk = buton.dataset.zorluk;
+        document.querySelectorAll('.zorluk-btn').forEach(b => b.classList.remove('secili'));
+        buton.classList.add('secili');
+        yenidenBaslat();
+      });
+    });
+
+    // Canvas üzerinde parmakla/fareyle sürükleyerek yön değiştirme
+    let surukleBaslangicX = 0;
+    let surukleBaslangicY = 0;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      surukleBaslangicX = e.clientX;
+      surukleBaslangicY = e.clientY;
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      const farkX = e.clientX - surukleBaslangicX;
+      const farkY = e.clientY - surukleBaslangicY;
+
+      if (Math.abs(farkX) < 20 && Math.abs(farkY) < 20) return; // çok küçük hareketleri sayma
+
+      if (Math.abs(farkX) > Math.abs(farkY)) {
+        yonDegistir(farkX > 0 ? 'sag' : 'sol');
+      } else {
+        yonDegistir(farkY > 0 ? 'asagi' : 'yukari');
+      }
+    });
+
+    // Sürekli çalışan çizim döngüsü: oyun mantığı setInterval ile ayrı çalışır,
+    // ama ekrana çizim her animasyon karesinde tekrar yapılır — böylece parçacık efektleri pürüzsüz akar
+    function cizDongu() {
+      ciz();
+      requestAnimationFrame(cizDongu);
+    }
+
+    // Üç resim de yüklenince oyunu ve çizim döngüsünü başlat
+    let yuklenenSayisi = 0;
+    function resimYuklendi() {
+      yuklenenSayisi++;
+      if (yuklenenSayisi === 3) {
+        skorGoster();
+        oyunuBaslat();
+        cizDongu();
+      }
+    }
+    kafaResmi.onload = resimYuklendi;
+    govdeResmi.onload = resimYuklendi;
+    kuyrukResmi.onload = resimYuklendi;
+  </script>
+
+</body>
+</html>
