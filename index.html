@@ -111,14 +111,6 @@
       margin-bottom: 6px;
     }
 
-    .ayarlar-paneli {
-      display: none;
-    }
-
-    .ayarlar-paneli.acik {
-      display: block;
-    }
-
     .secim-btn {
       border: none;
       border-radius: 999px;
@@ -281,24 +273,25 @@
     <div class="durum-cubugu">
       <span id="skor" class="rozet">Skor: 0 (Seviye: 1)</span>
       <span id="enYuksek" class="rozet">En Yüksek: 0</span>
+    </div>
+
+    <div class="secim-cubugu">
       <button id="duraklatBtn" class="duraklat-btn">⏸ Duraklat</button>
       <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
-      <button id="ayarlarBtn" class="secim-btn">⚙️ Ayarlar</button>
     </div>
 
     <div class="ilerleme-disi"><div id="ilerlemeIci" class="ilerleme-ici"></div></div>
 
-    <div id="ayarlarPaneli" class="ayarlar-paneli">
-      <div class="secim-cubugu">
-        <button class="secim-btn zorluk-btn" data-zorluk="kolay">🐢 Kolay</button>
-        <button class="secim-btn zorluk-btn secili" data-zorluk="orta">🐍 Orta</button>
-        <button class="secim-btn zorluk-btn" data-zorluk="zor">🔥 Zor</button>
-      </div>
-      <div class="secim-cubugu">
-        <button id="sesBtn" class="secim-btn">🔊 Ses</button>
-        <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
-        <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
-      </div>
+    <div class="secim-cubugu">
+      <button id="sesBtn" class="secim-btn">🔊 Ses</button>
+      <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
+      <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
+    </div>
+
+    <div class="secim-cubugu">
+      <button class="secim-btn zorluk-btn" data-zorluk="kolay">🐢 Kolay</button>
+      <button class="secim-btn zorluk-btn secili" data-zorluk="orta">🐍 Orta</button>
+      <button class="secim-btn zorluk-btn" data-zorluk="zor">🔥 Zor</button>
     </div>
 
     <canvas id="oyunAlani" width="600" height="600"></canvas>
@@ -1054,17 +1047,6 @@
     });
 
     sisButonuGoster();
-
-    // --- Ayarlar paneli: açılınca oyun aktifse otomatik duraklat, canvas yer değiştirip oyunu bozmasın ---
-    const ayarlarBtn = document.getElementById('ayarlarBtn');
-    const ayarlarPaneli = document.getElementById('ayarlarPaneli');
-
-    ayarlarBtn.addEventListener('click', () => {
-      if (oyunAktif && oyunBasladi && !duraklatildi) {
-        duraklatVeyaDevamEt();
-      }
-      ayarlarPaneli.classList.toggle('acik');
-    });
 
     document.querySelectorAll('.zorluk-btn').forEach((buton) => {
       buton.addEventListener('click', () => {
