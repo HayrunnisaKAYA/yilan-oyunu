@@ -111,6 +111,14 @@
       margin-bottom: 6px;
     }
 
+    .ayarlar-paneli {
+      display: none;
+    }
+
+    .ayarlar-paneli.acik {
+      display: block;
+    }
+
     .secim-btn {
       border: none;
       border-radius: 999px;
@@ -253,6 +261,16 @@
       color: #ffe27a;
     }
 
+    #mesaj.kucul {
+      color: #3a7a2e;
+      background: #eaf7e0;
+    }
+
+    body.koyu-tema #mesaj.kucul {
+      background: #22331c;
+      color: #a8e08a;
+    }
+
   </style>
 </head>
 <body>
@@ -265,17 +283,22 @@
       <span id="enYuksek" class="rozet">En Yüksek: 0</span>
       <button id="duraklatBtn" class="duraklat-btn">⏸ Duraklat</button>
       <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
-      <button id="sesBtn" class="secim-btn">🔊 Ses</button>
-      <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
-      <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
+      <button id="ayarlarBtn" class="secim-btn">⚙️ Ayarlar</button>
     </div>
 
     <div class="ilerleme-disi"><div id="ilerlemeIci" class="ilerleme-ici"></div></div>
 
-    <div class="secim-cubugu">
-      <button class="secim-btn zorluk-btn" data-zorluk="kolay">🐢 Kolay</button>
-      <button class="secim-btn zorluk-btn secili" data-zorluk="orta">🐍 Orta</button>
-      <button class="secim-btn zorluk-btn" data-zorluk="zor">🔥 Zor</button>
+    <div id="ayarlarPaneli" class="ayarlar-paneli">
+      <div class="secim-cubugu">
+        <button class="secim-btn zorluk-btn" data-zorluk="kolay">🐢 Kolay</button>
+        <button class="secim-btn zorluk-btn secili" data-zorluk="orta">🐍 Orta</button>
+        <button class="secim-btn zorluk-btn" data-zorluk="zor">🔥 Zor</button>
+      </div>
+      <div class="secim-cubugu">
+        <button id="sesBtn" class="secim-btn">🔊 Ses</button>
+        <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
+        <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
+      </div>
     </div>
 
     <canvas id="oyunAlani" width="600" height="600"></canvas>
@@ -667,6 +690,21 @@
       return false;
     }
 
+    // Diyet yemi yenip küçülünce, oyun mesajı alanında kısa süreliğine bunu gösterir
+    let kucukMesajZamanlayici = null;
+    function kucukMesajiGoster() {
+      const mesaj = document.getElementById('mesaj');
+      mesaj.textContent = 'Küçüldün! 🥦';
+      mesaj.className = 'kucul';
+      clearTimeout(kucukMesajZamanlayici);
+      kucukMesajZamanlayici = setTimeout(() => {
+        if (mesaj.className === 'kucul') {
+          mesaj.textContent = '';
+          mesaj.className = '';
+        }
+      }, 1200);
+    }
+
     // Yılanın, yemlerin, engellerin ve portalların üzerinde olmayan boş bir kare bulur
     function pozisyonBosMu(pozisyon) {
       const yilandaMi = yilan.some(p => p.x === pozisyon.x && p.y === pozisyon.y);
@@ -939,6 +977,7 @@
         }
 
         skorGoster();
+        kucukMesajiGoster();
       } else {
         yilan.pop();
       }
@@ -1015,6 +1054,17 @@
     });
 
     sisButonuGoster();
+
+    // --- Ayarlar paneli: açılınca oyun aktifse otomatik duraklat, canvas yer değiştirip oyunu bozmasın ---
+    const ayarlarBtn = document.getElementById('ayarlarBtn');
+    const ayarlarPaneli = document.getElementById('ayarlarPaneli');
+
+    ayarlarBtn.addEventListener('click', () => {
+      if (oyunAktif && oyunBasladi && !duraklatildi) {
+        duraklatVeyaDevamEt();
+      }
+      ayarlarPaneli.classList.toggle('acik');
+    });
 
     document.querySelectorAll('.zorluk-btn').forEach((buton) => {
       buton.addEventListener('click', () => {
