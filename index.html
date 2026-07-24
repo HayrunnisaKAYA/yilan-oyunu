@@ -489,6 +489,14 @@
     // --- Ses efektleri: dosya kullanmadan, doğrudan tarayıcıda kısa bir ton üretiyoruz ---
     let sesBaglami = null;
 
+    // Özellikle mobilde (iOS Safari) ses bağlamı yalnızca gerçek bir dokunma/tuş
+    // anının çağrı yığını içinde açılırsa çalışır; bu yüzden ilk kullanıcı etkileşiminde
+    // (tuşa basma/dokunma) hemen burada oluşturup uyandırıyoruz.
+    function sesKilidiniAc() {
+      if (!sesBaglami) sesBaglami = new (window.AudioContext || window.webkitAudioContext)();
+      if (sesBaglami.state === 'suspended') sesBaglami.resume();
+    }
+
     // Ses bağlamı tarayıcı tarafından "suspended" durumuna alınmış olabilir;
     // resume() ASENKRON çalıştığı için, sesi ancak resume tamamlandıktan sonra çalmalıyız,
     // yoksa ses hiç duyulmadan sessizce kaybolabiliyor.
@@ -672,6 +680,8 @@
     }
 
     function ilkGirdiVarsaBaslat() {
+      sesKilidiniAc(); // her çağrıda dene, sadece ilkinde gerçekten kilidi açar ama zararı yok
+
       if (oyunBasladi) return;
       oyunBasladi = true;
       const mesaj = document.getElementById('mesaj');
