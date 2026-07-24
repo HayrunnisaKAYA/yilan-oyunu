@@ -70,6 +70,42 @@
       align-items: center;
     }
 
+    .canvas-sarici {
+      position: relative;
+      display: inline-block;
+    }
+
+    .aciklama-paneli {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 12px;
+      padding: 12px;
+      box-sizing: border-box;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .aciklama-paneli p {
+      margin: 0;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #3f7a52;
+    }
+
+    body.koyu-tema .aciklama-paneli {
+      background: rgba(20, 30, 22, 0.94);
+    }
+
+    body.koyu-tema .aciklama-paneli p {
+      color: #a8e0bb;
+    }
+
     /* Telefon yan (yatay) çevrilince: kontroller sola, oyun alanı sağa geçsin ki canvas büyüsün */
     @media (orientation: landscape) and (max-height: 500px) {
       .kart {
@@ -342,7 +378,16 @@
     </div>
 
     <div class="oyun-govdesi">
-      <canvas id="oyunAlani" width="600" height="600"></canvas>
+      <div class="canvas-sarici">
+        <canvas id="oyunAlani" width="600" height="600"></canvas>
+        <div id="aciklamaPaneli" class="aciklama-paneli">
+          <p>🍎 Elma ye, büyü ve puan kazan</p>
+          <p>⭐ Altın yem: sınırlı sürede bonus puan</p>
+          <p>🥦 Diyet yemi: yılanı küçültür</p>
+          <p>🌀 Portal: birine gir, diğerinden çık</p>
+          <p>🌫️ Sis modu: sadece yakın çevre görünür</p>
+        </div>
+      </div>
       <p id="mesaj"></p>
     </div>
 
@@ -882,6 +927,7 @@
       const mesaj = document.getElementById('mesaj');
       mesaj.textContent = 'Ok tuşları, kaydırma veya dokunma ile oyna — başlamak için bir yöne bas';
       mesaj.className = 'hazir';
+      document.getElementById('aciklamaPaneli').style.display = 'flex';
 
       const duraklatBtn = document.getElementById('duraklatBtn');
       duraklatBtn.disabled = false;
@@ -920,6 +966,7 @@
       const mesaj = document.getElementById('mesaj');
       mesaj.textContent = '';
       mesaj.className = '';
+      document.getElementById('aciklamaPaneli').style.display = 'none';
       oyunuBaslat();
     }
 
@@ -1167,7 +1214,7 @@
         boyut = Math.max(160, Math.min(880, kalanGenislik, kalanYukseklik));
       } else {
         const altPanel = document.querySelector('.alt-panel');
-        const ustBosluk = canvas.offsetTop;
+        const ustBosluk = document.querySelector('.canvas-sarici').offsetTop;
         const altBosluk = mesaj.offsetHeight + altPanel.offsetHeight + 36; // mesaj + alt panel + boşluklar (güvenlik payıyla)
         const kalanYukseklik = window.innerHeight * 0.95 - ustBosluk - altBosluk;
         boyut = Math.max(220, Math.min(880, window.innerWidth * 0.96, kalanYukseklik));
