@@ -267,6 +267,7 @@
       <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
       <button id="sesBtn" class="secim-btn">🔊 Ses</button>
       <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
+      <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
     </div>
 
     <div class="ilerleme-disi"><div id="ilerlemeIci" class="ilerleme-ici"></div></div>
@@ -300,7 +301,16 @@
     const yem = { x: 15, y: 10 };
     let altinYem = null; // aktif değilken null
     let altinYemZamanlayici = null;
+    let diyetYem = null; // yılanı küçülten yem, aktif değilken null
+    let diyetYemZamanlayici = null;
     let engeller = [];
+    let portallar = []; // aktifken tam olarak 2 eleman içerir
+
+    let sisModu = localStorage.getItem('yilanSisModu') !== '0'; // varsayılan açık
+
+    let komboSayaci = 0;
+    let komboCarpani = 1;
+    let sonYemeZamani = 0;
 
     // --- Kafa, gövde ve kuyruk için SVG çizimleri (sağa bakacak şekilde tasarlandı, yöne göre döndürülecek) ---
     const kafaSvg = `
@@ -462,6 +472,21 @@
         ctx.fill();
       });
 
+      // Portal çifti (varsa), dönen mor/mavi girdaplar olarak
+      if (portallar.length === 2) {
+        const portalRenkleri = ['rgba(154, 95, 206, 0.85)', 'rgba(61, 150, 201, 0.85)'];
+        portallar.forEach((portal, i) => {
+          ctx.save();
+          ctx.shadowColor = portalRenkleri[i];
+          ctx.shadowBlur = 16;
+          ctx.font = kutuBoyu + 'px serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🌀', portal.x * kutuBoyu + kutuBoyu / 2, portal.y * kutuBoyu + kutuBoyu / 2 + 1);
+          ctx.restore();
+        });
+      }
+
       // Yem, hafif parlayan bir gölgeyle dikkat çeksin
       ctx.save();
       ctx.shadowColor = 'rgba(224, 82, 82, 0.6)';
@@ -481,6 +506,18 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⭐', altinYem.x * kutuBoyu + kutuBoyu / 2, altinYem.y * kutuBoyu + kutuBoyu / 2 + 1);
+        ctx.restore();
+      }
+
+      // Diyet yemi (varsa), yeşilimsi bir parlamayla
+      if (diyetYem) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(126, 217, 87, 0.85)';
+        ctx.shadowBlur = 14;
+        ctx.font = kutuBoyu + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🥦', diyetYem.x * kutuBoyu + kutuBoyu / 2, diyetYem.y * kutuBoyu + kutuBoyu / 2 + 1);
         ctx.restore();
       }
 
@@ -506,6 +543,18 @@
       ctx.restore();
 
       parcaciklariGuncelleVeCiz();
+
+      // Sis modu: yılanın kafası etrafındaki dar bir alan hariç her yeri karart
+      if (sisModu) {
+        const kafa = yilan[0];
+        const merkezX = kafa.x * kutuBoyu + kutuBoyu / 2;
+        const merkezY = kafa.y * kutuBoyu + kutuBoyu / 2;
+        const grd = ctx.createRadialGradient(merkezX, merkezY, kutuBoyu * 2.5, merkezX, merkezY, kutuBoyu * 6);
+        grd.addColorStop(0, 'rgba(15, 25, 18, 0)');
+        grd.addColorStop(1, 'rgba(15, 25, 18, 0.94)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
     const kareSayisi = canvas.width / kutuBoyu;
@@ -589,11 +638,23 @@
       tonCal(500, 1000, 0.35, 0.3);
     }
 
+    // Portaldan geçince çalan hızlı "zip" sesi
+    function portalSesiCal() {
+      tonCal(400, 1300, 0.15, 0.22);
+    }
+
+    // Diyet yemi yenince çalan, küçülmeyi hissettiren alçalan ton
+    function diyetSesiCal() {
+      tonCal(500, 250, 0.15, 0.2);
+    }
+
     function skorGoster() {
-      document.getElementById('skor').textContent = 'Skor: ' + skor + '  (Seviye: ' + seviye + ')';
+      const komboMetni = komboCarpani > 1 ? '  x' + komboCarpani + ' Kombo!' : '';
+      document.getElementById('skor').textContent = 'Skor: ' + skor + '  (Seviye: ' + seviye + ')' + komboMetni;
       document.getElementById('enYuksek').textContent = 'En Yüksek: ' + enYuksekSkor;
 
-      const ilerlemeYuzdesi = ((skor % 10) / 10) * 100;
+      const seviyeBaslangici = (seviye - 1) * 10;
+      const ilerlemeYuzdesi = ((skor - seviyeBaslangici) / 10) * 100;
       document.getElementById('ilerlemeIci').style.width = ilerlemeYuzdesi + '%';
     }
 
@@ -606,13 +667,15 @@
       return false;
     }
 
-    // Yılanın, yemin, altın yemin ve engellerin üzerinde olmayan boş bir kare bulur
+    // Yılanın, yemlerin, engellerin ve portalların üzerinde olmayan boş bir kare bulur
     function pozisyonBosMu(pozisyon) {
       const yilandaMi = yilan.some(p => p.x === pozisyon.x && p.y === pozisyon.y);
       const yemdeMi = pozisyon.x === yem.x && pozisyon.y === yem.y;
       const altinYemdeMi = altinYem && pozisyon.x === altinYem.x && pozisyon.y === altinYem.y;
+      const diyetYemdeMi = diyetYem && pozisyon.x === diyetYem.x && pozisyon.y === diyetYem.y;
       const engeldeMi = engeller.some(e => e.x === pozisyon.x && e.y === pozisyon.y);
-      return !yilandaMi && !yemdeMi && !altinYemdeMi && !engeldeMi;
+      const portaldaMi = portallar.some(p => p.x === pozisyon.x && p.y === pozisyon.y);
+      return !yilandaMi && !yemdeMi && !altinYemdeMi && !diyetYemdeMi && !engeldeMi && !portaldaMi;
     }
 
     function rastgeleBosPozisyon() {
@@ -645,11 +708,29 @@
       }
     }
 
+    // Elma yenince belirli bir ihtimalle, birkaç saniyeliğine duran, yılanı küçülten bir diyet yemi çıkar
+    function diyetYemDenemesiYap() {
+      if (diyetYem) return;
+      if (Math.random() < 0.25) {
+        diyetYem = rastgeleBosPozisyon();
+        diyetYemZamanlayici = setTimeout(() => {
+          diyetYem = null;
+        }, 6000);
+      }
+    }
+
     // Seviye arttıkça haritaya sabit taş engeller ekler
     function engelEkle(sayi) {
       for (let i = 0; i < sayi; i++) {
         engeller.push(rastgeleBosPozisyon());
       }
+    }
+
+    // Birbirine bağlı iki portal karesi yerleştirir; birine giren diğerinden çıkar
+    function portalCiftiYerlestir() {
+      portallar = [];
+      portallar.push(rastgeleBosPozisyon());
+      portallar.push(rastgeleBosPozisyon());
     }
 
     function oyunuBaslat() {
@@ -694,9 +775,12 @@
       yem.y = 10;
 
       if (altinYemZamanlayici) clearTimeout(altinYemZamanlayici);
+      if (diyetYemZamanlayici) clearTimeout(diyetYemZamanlayici);
       altinYem = null;
+      diyetYem = null;
       engeller = [];
       parcaciklar = [];
+      portalCiftiYerlestir();
 
       skor = 0;
       seviye = 1;
@@ -704,6 +788,9 @@
       oyunAktif = true;
       oyunBasladi = false;
       duraklatildi = false;
+      komboSayaci = 0;
+      komboCarpani = 1;
+      sonYemeZamani = 0;
       clearInterval(zamanlayici);
 
       const mesaj = document.getElementById('mesaj');
@@ -767,6 +854,19 @@
       else if (yon === 'yukari') yeniKafa.y--;
       else if (yon === 'asagi') yeniKafa.y++;
 
+      // Portal kontrolü: girişteki portala basarsa çıkış portalına ışınlan
+      if (portallar.length === 2) {
+        if (yeniKafa.x === portallar[0].x && yeniKafa.y === portallar[0].y) {
+          yeniKafa.x = portallar[1].x;
+          yeniKafa.y = portallar[1].y;
+          portalSesiCal();
+        } else if (yeniKafa.x === portallar[1].x && yeniKafa.y === portallar[1].y) {
+          yeniKafa.x = portallar[0].x;
+          yeniKafa.y = portallar[0].y;
+          portalSesiCal();
+        }
+      }
+
       // Duvara çarptı mı
       if (yeniKafa.x < 0 || yeniKafa.x >= kareSayisi || yeniKafa.y < 0 || yeniKafa.y >= kareSayisi) {
         oyunuBitir();
@@ -792,14 +892,21 @@
 
       const yemYendi = yeniKafa.x === yem.x && yeniKafa.y === yem.y;
       const altinYemYendi = altinYem && yeniKafa.x === altinYem.x && yeniKafa.y === altinYem.y;
+      const diyetYemYendi = diyetYem && yeniKafa.x === diyetYem.x && yeniKafa.y === diyetYem.y;
 
       if (yemYendi) {
-        skor++;
+        // Kombo: art arda hızlı yersen puan çarpanı artar (x5'e kadar), yavaş yersen sıfırlanır
+        const simdi = Date.now();
+        komboSayaci = (simdi - sonYemeZamani < 3000) ? komboSayaci + 1 : 0;
+        sonYemeZamani = simdi;
+        komboCarpani = Math.min(5, 1 + komboSayaci);
+
+        skor += komboCarpani;
         yemSesiCal();
         parcaciklarOlustur(merkezPikselX, merkezPikselY, '#e05252');
 
-        // Her 10 elmada bir seviye atla, hızlan ve (2. seviyeden itibaren) yeni engeller ekle
-        if (skor % 10 === 0) {
+        // Skor eşiği aşıldıkça seviye atla, hızlan ve (2. seviyeden itibaren) yeni engeller ekle
+        while (skor >= seviye * 10) {
           seviye++;
           hiz = Math.max(60, hiz - 15); // çok hızlanınca oynanamaz olmasın diye alt sınır koyduk
           oyunuBaslat();
@@ -809,12 +916,28 @@
         skorGoster();
         yeniYemYerlestir();
         altinYemDenemesiYap();
+        diyetYemDenemesiYap();
       } else if (altinYemYendi) {
         skor += 3;
+        sonYemeZamani = Date.now(); // kombo süresi bu yemekle de uzasın
         clearTimeout(altinYemZamanlayici);
         altinYem = null;
         altinYemSesiCal();
         parcaciklarOlustur(merkezPikselX, merkezPikselY, '#ffcc33');
+        skorGoster();
+      } else if (diyetYemYendi) {
+        skor += 1;
+        sonYemeZamani = Date.now();
+        clearTimeout(diyetYemZamanlayici);
+        diyetYem = null;
+        diyetSesiCal();
+        parcaciklarOlustur(merkezPikselX, merkezPikselY, '#7ed957');
+
+        // Küçült: baş zaten eklendiği için kuyruktan 2 parça çıkarınca net 1 kısalır
+        for (let i = 0; i < 2 && yilan.length > 3; i++) {
+          yilan.pop();
+        }
+
         skorGoster();
       } else {
         yilan.pop();
@@ -878,6 +1001,21 @@
 
     sesButonuGoster();
 
+    // --- Sis modu aç/kapa ---
+    const sisBtn = document.getElementById('sisBtn');
+    function sisButonuGoster() {
+      sisBtn.textContent = sisModu ? '🌫️ Sis Modu' : '☀️ Sis Kapalı';
+      sisBtn.classList.toggle('secili', sisModu);
+    }
+
+    sisBtn.addEventListener('click', () => {
+      sisModu = !sisModu;
+      localStorage.setItem('yilanSisModu', sisModu ? '1' : '0');
+      sisButonuGoster();
+    });
+
+    sisButonuGoster();
+
     document.querySelectorAll('.zorluk-btn').forEach((buton) => {
       buton.addEventListener('click', () => {
         secilenZorluk = buton.dataset.zorluk;
@@ -928,6 +1066,7 @@
     function resimYuklendi() {
       yuklenenSayisi++;
       if (yuklenenSayisi === 3) {
+        portalCiftiYerlestir();
         skorGoster();
         const mesaj = document.getElementById('mesaj');
         mesaj.textContent = 'Ok tuşları, kaydırma veya dokunma ile oyna — başlamak için bir yöne bas';
