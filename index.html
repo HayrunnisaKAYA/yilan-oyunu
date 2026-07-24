@@ -82,10 +82,21 @@
         width: auto;
         max-height: 95vh;
         overflow-y: auto;
+        order: 1;
       }
 
       .ust-panel h1 {
         font-size: 1.1rem;
+      }
+
+      .alt-panel {
+        order: 2;
+        max-height: 95vh;
+        overflow-y: auto;
+      }
+
+      .oyun-govdesi {
+        order: 3;
       }
     }
 
@@ -316,17 +327,11 @@
         <span id="enYuksek" class="rozet">En Yüksek: 0</span>
       </div>
 
-      <div class="secim-cubugu">
-        <button id="duraklatBtn" class="duraklat-btn">⏸ Duraklat</button>
-        <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
-      </div>
-
       <div class="ilerleme-disi"><div id="ilerlemeIci" class="ilerleme-ici"></div></div>
 
       <div class="secim-cubugu">
-        <button id="sesBtn" class="secim-btn">🔊 Ses</button>
-        <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
-        <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
+        <button id="duraklatBtn" class="duraklat-btn">⏸ Duraklat</button>
+        <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
       </div>
 
       <div class="secim-cubugu">
@@ -339,6 +344,12 @@
     <div class="oyun-govdesi">
       <canvas id="oyunAlani" width="600" height="600"></canvas>
       <p id="mesaj"></p>
+    </div>
+
+    <div class="secim-cubugu alt-panel">
+      <button id="sesBtn" class="secim-btn">🔊 Ses</button>
+      <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
+      <button id="sisBtn" class="secim-btn">🌫️ Sis Modu</button>
     </div>
   </div>
 
@@ -986,6 +997,7 @@
           hiz = Math.max(60, hiz - 15); // çok hızlanınca oynanamaz olmasın diye alt sınır koyduk
           oyunuBaslat();
           if (seviye >= 2) engelEkle(2);
+          portalCiftiYerlestir(); // her seviyede portallar yeni bir yere geçsin
         }
 
         skorGoster();
@@ -1146,11 +1158,12 @@
 
       let boyut;
       if (yatayMod) {
-        // Yatay modda kontroller solda, canvas sağda — genişlik de bir sınır oluşturur
+        // Yatay modda kontroller solda (iki panel), canvas sağda — genişlik de bir sınır oluşturur
         const panel = document.querySelector('.ust-panel');
+        const altPanel = document.querySelector('.alt-panel');
         const altBosluk = mesaj.offsetHeight + 24;
         const kalanYukseklik = window.innerHeight * 0.95 - altBosluk;
-        const kalanGenislik = window.innerWidth * 0.96 - panel.offsetWidth - 14;
+        const kalanGenislik = window.innerWidth * 0.96 - panel.offsetWidth - altPanel.offsetWidth - 28;
         boyut = Math.max(160, Math.min(880, kalanGenislik, kalanYukseklik));
       } else {
         const ustBosluk = canvas.offsetTop;
