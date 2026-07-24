@@ -243,6 +243,16 @@
       color: #8fe0ac;
     }
 
+    #mesaj.rekor {
+      color: #8a6d00;
+      background: #fff4cc;
+    }
+
+    body.koyu-tema #mesaj.rekor {
+      background: #3a3210;
+      color: #ffe27a;
+    }
+
   </style>
 </head>
 <body>
@@ -255,6 +265,7 @@
       <span id="enYuksek" class="rozet">En Yüksek: 0</span>
       <button id="duraklatBtn" class="duraklat-btn">⏸ Duraklat</button>
       <button id="tekrarBtn" class="tekrar-btn" disabled>↻ Tekrar Oyna</button>
+      <button id="sesBtn" class="secim-btn">🔊 Ses</button>
       <button id="temaBtn" class="secim-btn">🌙 Koyu Tema</button>
     </div>
 
@@ -488,6 +499,7 @@
 
     // --- Ses efektleri: dosya kullanmadan, doğrudan tarayıcıda kısa bir ton üretiyoruz ---
     let sesBaglami = null;
+    let sesAcik = localStorage.getItem('yilanSesAcik') !== '0';
 
     // Özellikle mobilde (iOS Safari) ses bağlamı yalnızca gerçek bir dokunma/tuş
     // anının çağrı yığını içinde açılırsa çalışır; bu yüzden ilk kullanıcı etkileşiminde
@@ -501,6 +513,7 @@
     // resume() ASENKRON çalıştığı için, sesi ancak resume tamamlandıktan sonra çalmalıyız,
     // yoksa ses hiç duyulmadan sessizce kaybolabiliyor.
     function tonCal(baslangicFrekans, bitisFrekans, sure, kazancBaslangic) {
+      if (!sesAcik) return;
       if (!sesBaglami) sesBaglami = new (window.AudioContext || window.webkitAudioContext)();
 
       const calistir = () => {
@@ -542,6 +555,11 @@
       tonCal(320, 70, 0.45, 0.3);
     }
 
+    // Yeni rekor kırılınca çalan, yükselen neşeli ton
+    function rekorSesiCal() {
+      tonCal(500, 1000, 0.35, 0.3);
+    }
+
     function skorGoster() {
       document.getElementById('skor').textContent = 'Skor: ' + skor + '  (Seviye: ' + seviye + ')';
       document.getElementById('enYuksek').textContent = 'En Yüksek: ' + enYuksekSkor;
@@ -551,10 +569,12 @@
     }
 
     function enYuksekSkoruGuncelle() {
-      if (skor > enYuksekSkor) {
+      if (skor > enYuksekSkor && skor > 0) {
         enYuksekSkor = skor;
         localStorage.setItem('yilanEnYuksekSkor', enYuksekSkor);
+        return true;
       }
+      return false;
     }
 
     // Yılanın, yemin, altın yemin ve engellerin üzerinde olmayan boş bir kare bulur
@@ -611,17 +631,27 @@
     function oyunuBitir() {
       oyunAktif = false;
       clearInterval(zamanlayici);
-      bitisSesiCal();
 
       canvas.classList.add('sars');
       setTimeout(() => canvas.classList.remove('sars'), 400);
 
-      enYuksekSkoruGuncelle();
+      const yeniRekor = enYuksekSkoruGuncelle();
       skorGoster();
 
+      if (yeniRekor) {
+        rekorSesiCal();
+      } else {
+        bitisSesiCal();
+      }
+
       const mesaj = document.getElementById('mesaj');
-      mesaj.textContent = 'Oyun bitti! Skor: ' + skor + ' — Tekrar Oyna butonuna basabilirsin';
-      mesaj.className = 'bitti';
+      if (yeniRekor) {
+        mesaj.textContent = 'Yeni Rekor! 🎉 Skor: ' + skor;
+        mesaj.className = 'rekor';
+      } else {
+        mesaj.textContent = 'Oyun bitti! Skor: ' + skor + ' — Tekrar Oyna butonuna basabilirsin';
+        mesaj.className = 'bitti';
+      }
 
       document.getElementById('duraklatBtn').disabled = true;
       document.getElementById('tekrarBtn').disabled = false;
@@ -647,7 +677,7 @@
       clearInterval(zamanlayici);
 
       const mesaj = document.getElementById('mesaj');
-      mesaj.textContent = 'Başlamak için bir yön tuşuna bas veya kaydır';
+      mesaj.textContent = 'Ok tuşları, kaydırma veya dokunma ile oyna — başlamak için bir yöne bas';
       mesaj.className = 'hazir';
 
       const duraklatBtn = document.getElementById('duraklatBtn');
@@ -803,6 +833,21 @@
 
     koyuTemaGoster();
 
+    // --- Ses aç/kapa ---
+    const sesBtn = document.getElementById('sesBtn');
+    function sesButonuGoster() {
+      sesBtn.textContent = sesAcik ? '🔊 Ses' : '🔇 Ses';
+    }
+
+    sesBtn.addEventListener('click', () => {
+      sesAcik = !sesAcik;
+      localStorage.setItem('yilanSesAcik', sesAcik ? '1' : '0');
+      sesButonuGoster();
+      if (sesAcik) sesKilidiniAc(); // telefonda tekrar açınca da kilidi tazele
+    });
+
+    sesButonuGoster();
+
     document.querySelectorAll('.zorluk-btn').forEach((buton) => {
       buton.addEventListener('click', () => {
         secilenZorluk = buton.dataset.zorluk;
@@ -855,7 +900,7 @@
       if (yuklenenSayisi === 3) {
         skorGoster();
         const mesaj = document.getElementById('mesaj');
-        mesaj.textContent = 'Başlamak için bir yön tuşuna bas veya kaydır';
+        mesaj.textContent = 'Ok tuşları, kaydırma veya dokunma ile oyna — başlamak için bir yöne bas';
         mesaj.className = 'hazir';
         cizDongu();
       }
