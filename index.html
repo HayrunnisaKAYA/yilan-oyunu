@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Yılan Oyunu</title>
   <style>
     html, body {
@@ -670,14 +671,17 @@
       }
     }
 
+    function ilkGirdiVarsaBaslat() {
+      if (oyunBasladi) return;
+      oyunBasladi = true;
+      const mesaj = document.getElementById('mesaj');
+      mesaj.textContent = '';
+      mesaj.className = '';
+      oyunuBaslat();
+    }
+
     function yonDegistir(yeniYon) {
-      if (!oyunBasladi) {
-        oyunBasladi = true;
-        const mesaj = document.getElementById('mesaj');
-        mesaj.textContent = '';
-        mesaj.className = '';
-        oyunuBaslat();
-      }
+      ilkGirdiVarsaBaslat();
 
       if (yeniYon === zitYon[yon]) return; // yılan aniden ters yöne dönüp kendine çarpmasın
       yon = yeniYon;
@@ -801,17 +805,24 @@
     // Canvas üzerinde parmakla/fareyle sürükleyerek yön değiştirme
     let surukleBaslangicX = 0;
     let surukleBaslangicY = 0;
+    let dokunmaOncesiBasladiMi = false;
 
     canvas.addEventListener('pointerdown', (e) => {
       surukleBaslangicX = e.clientX;
       surukleBaslangicY = e.clientY;
+      dokunmaOncesiBasladiMi = oyunBasladi;
+      ilkGirdiVarsaBaslat(); // ekrana basmak da oyunu başlatsın
     });
 
     canvas.addEventListener('pointerup', (e) => {
       const farkX = e.clientX - surukleBaslangicX;
       const farkY = e.clientY - surukleBaslangicY;
 
-      if (Math.abs(farkX) < 20 && Math.abs(farkY) < 20) return; // çok küçük hareketleri sayma
+      if (Math.abs(farkX) < 20 && Math.abs(farkY) < 20) {
+        // Sürükleme değil, tek dokunma/tıklama — oyun zaten çalışıyorsa duraklat/devam et
+        if (dokunmaOncesiBasladiMi) duraklatVeyaDevamEt();
+        return;
+      }
 
       if (Math.abs(farkX) > Math.abs(farkY)) {
         yonDegistir(farkX > 0 ? 'sag' : 'sol');
